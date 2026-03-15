@@ -1,0 +1,28 @@
+{
+  "_comment": "Curated list of blockable services for tween parental controls. service_id must match AdGuard Home's built-in service identifiers exactly. To add/remove services, edit this file and restart the app.",
+  "services": [
+    { "service_id": "instagram",   "display_name": "Instagram",    "category": "social" },
+    { "service_id": "tiktok",      "display_name": "TikTok",       "category": "social" },
+    { "service_id": "snapchat",    "display_name": "Snapchat",     "category": "social" },
+    { "service_id": "twitter",     "display_name": "Twitter / X",  "category": "social" },
+    { "service_id": "facebook",    "display_name": "Facebook",     "category": "social" },
+    { "service_id": "reddit",      "display_name": "Reddit",       "category": "social" },
+    { "service_id": "pinterest",   "display_name": "Pinterest",    "category": "social" },
+    { "service_id": "tumblr",      "display_name": "Tumblr",       "category": "social" },
+    { "service_id": "9gag",        "display_name": "9GAG",         "category": "social" },
+
+    { "service_id": "discord",     "display_name": "Discord",      "category": "messaging" },
+    { "service_id": "whatsapp",    "display_name": "WhatsApp",     "category": "messaging" },
+    { "service_id": "telegram",    "display_name": "Telegram",     "category": "messaging" },
+
+    { "service_id": "youtube",     "display_name": "YouTube",      "category": "streaming" },
+    { "service_id": "twitch",      "display_name": "Twitch",       "category": "streaming" },
+    { "service_id": "netflix",     "display_name": "Netflix",      "category": "streaming" },
+    { "service_id": "disney_plus", "display_name": "Disney+",      "category": "streaming" },
+
+    { "service_id": "steam",       "display_name": "Steam",        "category": "gaming" },
+    { "service_id": "roblox",      "display_name": "Roblox",       "category": "gaming" },
+    { "service_id": "minecraft",   "display_name": "Minecraft",    "category": "gaming" },
+    { "service_id": "epic_games",  "display_name": "Epic Games",   "category": "gaming" }
+  ]
+}
