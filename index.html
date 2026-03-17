@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Gatekeeper</title>
+    <meta name="application-name" content="Gatekeeper">
+    <meta name="theme-color" content="#224f6e">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Gatekeeper">
+    <link rel="manifest" href="/gatekeeper/api/v1/ui/manifest">
+    <link rel="icon" type="image/png" sizes="192x192" href="/gatekeeper/api/v1/ui/icon-192">
+    <link rel="icon" type="image/png" sizes="512x512" href="/gatekeeper/api/v1/ui/icon-512">
+    <link rel="icon" href="/gatekeeper/api/v1/ui/icon" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/gatekeeper/api/v1/ui/icon-192">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        ink: '#131926',
+                        sand: '#f7f3ea',
+                        cedar: '#8f4e27',
+                        moss: '#2c6e49',
+                        ember: '#be3b29'
+                    },
+                    fontFamily: {
+                        display: ['Space Grotesk', 'sans-serif'],
+                        body: ['IBM Plex Sans', 'sans-serif']
+                    },
+                    keyframes: {
+                        reveal: {
+                            '0%': { opacity: '0', transform: 'translateY(8px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' }
+                        }
+                    },
+                    animation: {
+                        reveal: 'reveal 320ms ease-out forwards'
+                    }
+                }
+            }
+        };
+    </script>
+    <style>
+        :root {
+            --paper: #fbf8f1;
+            --panel: rgba(255, 255, 255, 0.78);
+            --line: rgba(16, 24, 40, 0.12);
+        }
+        body {
+            background:
+                radial-gradient(circle at 16% 18%, rgba(212, 150, 75, 0.35) 0, rgba(212, 150, 75, 0) 32%),
+                radial-gradient(circle at 90% 4%, rgba(55, 105, 180, 0.28) 0, rgba(55, 105, 180, 0) 28%),
+                linear-gradient(160deg, #fcfaf5 0%, #f4efe4 55%, #e8e5dd 100%);
+            min-height: 100vh;
+            color: #131926;
+            font-family: 'IBM Plex Sans', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .panel {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            backdrop-filter: blur(8px);
+        }
+    </style>
+</head>
+<body class="selection:bg-amber-200 selection:text-ink">
+    <div id="toastHost" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 space-y-2 w-[calc(100%-2rem)] max-w-md"></div>
+
+    <section id="pinGate" class="min-h-screen flex items-center justify-center p-5">
+        <div class="panel w-full max-w-md rounded-3xl p-6 shadow-xl shadow-amber-200/40 animate-reveal">
+            <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Gatekeeper</p>
+            <h1 class="mt-2 text-3xl font-display font-bold leading-tight">Parent PIN Required</h1>
+            <p class="mt-2 text-sm text-slate-600">Enter PIN to unlock device controls.</p>
+
+            <form id="pinForm" class="mt-6 space-y-3">
+                <label for="pinInput" class="block text-sm font-medium">PIN</label>
+                <input
+                    id="pinInput"
+                    type="password"
+                    inputmode="numeric"
+                    pattern="[0-9]*"
+                    autocomplete="off"
+                    class="w-full rounded-2xl border border-slate-300 bg-white/90 px-4 py-4 text-lg tracking-[0.25em] focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    placeholder="••••"
+                    required
+                >
+                <p id="pinError" class="text-sm text-ember min-h-5"></p>
+                <button
+                    id="pinSubmit"
+                    type="submit"
+                    class="w-full rounded-2xl bg-ink px-4 py-4 text-base font-semibold text-sand transition hover:brightness-110 active:scale-[0.99]"
+                >
+                    Unlock Controls
+                </button>
+            </form>
+        </div>
+    </section>
+
+    <main id="appShell" class="hidden pb-28">
+        <div class="mx-auto w-full max-w-md p-4">
+            <header class="panel rounded-3xl p-5 shadow-lg shadow-slate-300/30 animate-reveal">
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <p class="text-xs uppercase tracking-[0.15em] text-slate-500">Device Control</p>
+                        <h2 class="mt-1 text-2xl font-display font-bold">Gatekeeper Console</h2>
+                    </div>
+                    <button id="lockBtn" class="rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700">Lock</button>
+                </div>
+
+                <div class="mt-4">
+                    <label for="deviceSelect" class="text-sm font-medium">Select Device</label>
+                    <select id="deviceSelect" class="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
+                        <option value="">Loading devices...</option>
+                    </select>
+                    <p id="deviceHelp" class="mt-2 text-xs text-slate-500">Pick a device to load internet and service status.</p>
+                </div>
+            </header>
+
+            <section class="mt-4 panel rounded-3xl p-5 shadow-lg shadow-slate-300/30 animate-reveal">
+                <h3 class="text-sm uppercase tracking-[0.1em] text-slate-500">Current Status</h3>
+                <div class="mt-3 grid grid-cols-2 gap-3">
+                    <div class="rounded-2xl border border-slate-200 bg-white p-3">
+                        <p class="text-xs text-slate-500">Internet</p>
+                        <p id="internetState" class="mt-1 text-lg font-semibold text-slate-500">Select device</p>
+                    </div>
+                    <div class="rounded-2xl border border-slate-200 bg-white p-3">
+                        <p class="text-xs text-slate-500">Blocked Services</p>
+                        <p id="blockedCount" class="mt-1 text-lg font-semibold text-slate-500">-</p>
+                    </div>
+                </div>
+                <div id="blockedTags" class="mt-3 flex flex-wrap gap-2"></div>
+            </section>
+
+            <section class="mt-4 panel rounded-3xl p-5 shadow-lg shadow-slate-300/30 animate-reveal">
+                <h3 class="text-sm uppercase tracking-[0.1em] text-slate-500">Internet Control</h3>
+                <button id="internetToggleBtn" class="mt-3 w-full rounded-2xl bg-slate-300 px-4 py-4 text-base font-semibold text-slate-700" disabled>
+                    Select a device first
+                </button>
+            </section>
+
+            <section class="mt-4 panel rounded-3xl p-5 shadow-lg shadow-slate-300/30 animate-reveal">
+                <h3 class="text-sm uppercase tracking-[0.1em] text-slate-500">Quick Actions</h3>
+                <p class="mt-2 text-xs text-slate-500">One-tap controls for common YouTube and Minecraft usage.</p>
+                <div class="mt-3 grid grid-cols-1 gap-2">
+                    <button id="quickYoutubeBtn" class="rounded-2xl bg-sky-700 px-4 py-3 text-sm font-semibold text-white transition hover:brightness-110 active:scale-[0.99]" disabled>
+                        Allow YouTube for 30 minutes
+                    </button>
+                    <button id="quickMinecraftBtn" class="rounded-2xl bg-emerald-700 px-4 py-3 text-sm font-semibold text-white transition hover:brightness-110 active:scale-[0.99]" disabled>
+                        Allow Minecraft for 30 minutes
+                    </button>
+                    <button id="quickFreeTimeBtn" class="rounded-2xl bg-violet-800 px-4 py-3 text-sm font-semibold text-white transition hover:brightness-110 active:scale-[0.99]" disabled>
+                        Free Time 60 min (YouTube + Minecraft)
+                    </button>
+                    <button id="quickHomeworkBtn" class="rounded-2xl bg-indigo-800 px-4 py-3 text-sm font-semibold text-white transition hover:brightness-110 active:scale-[0.99]" disabled>
+                        Homework Mode (Block YouTube + Minecraft)
+                    </button>
+                </div>
+            </section>
+
+            <section class="mt-4 panel rounded-3xl p-5 shadow-lg shadow-slate-300/30 animate-reveal">
+                <h3 class="text-sm uppercase tracking-[0.1em] text-slate-500">Unblock Blocked Service</h3>
+                <label for="blockedServiceSelect" class="mt-3 block text-sm font-medium">Service</label>
+                <select id="blockedServiceSelect" class="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" disabled>
+                    <option value="">No blocked services</option>
+                </select>
+
+                <label for="unblockDuration" class="mt-3 block text-sm font-medium">Duration</label>
+                <select id="unblockDuration" class="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" disabled>
+                    <option value="permanent">Permanent</option>
+                    <option value="30">30 minutes</option>
+                    <option value="60">60 minutes</option>
+                    <option value="custom">Custom minutes</option>
+                </select>
+
+                <div id="customMinutesWrap" class="mt-3 hidden">
+                    <label for="customMinutes" class="block text-sm font-medium">Custom minutes</label>
+                    <input id="customMinutes" type="number" min="1" max="120" step="1" inputmode="numeric" class="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" placeholder="1 to 120 minutes">
+                </div>
+
+                <button id="applyUnblockBtn" class="mt-4 w-full rounded-2xl bg-amber-600 px-4 py-4 text-base font-semibold text-white transition hover:brightness-110 active:scale-[0.99]" disabled>
+                    Apply Unblock
+                </button>
+            </section>
+
+            <section class="mt-4 panel rounded-3xl p-5 shadow-lg shadow-slate-300/30 animate-reveal">
+                <h3 class="text-sm uppercase tracking-[0.1em] text-slate-500">Block New Service</h3>
+                <label for="categorySelect" class="mt-3 block text-sm font-medium">Category</label>
+                <select id="categorySelect" class="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" disabled>
+                    <option value="">Loading categories...</option>
+                </select>
+
+                <label for="serviceSelect" class="mt-3 block text-sm font-medium">Service</label>
+                <select id="serviceSelect" class="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" disabled>
+                    <option value="">Select category first</option>
+                </select>
+
+                <button id="blockServiceBtn" class="mt-4 w-full rounded-2xl bg-cedar px-4 py-4 text-base font-semibold text-white transition hover:brightness-110 active:scale-[0.99]" disabled>
+                    Block Permanently
+                </button>
+            </section>
+        </div>
+
+        <div class="fixed inset-x-0 bottom-0 border-t border-slate-200 bg-white/90 px-4 py-3 backdrop-blur">
+            <div class="mx-auto flex max-w-md gap-2">
+                <button id="refreshBtn" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700">Refresh</button>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const SERVER_BASE_URL = 'http://192.168.4.23/gatekeeper';
+        const API_BASE_URL = `${SERVER_BASE_URL}/api/v1`;
+
+        const state = {
+            pin: '',
+            devices: [],
+            selectedDevice: null,
+            isolation: null,
+            blockedServices: [],
+            catalog: []
+        };
+
+        const els = {
+            pinGate: document.getElementById('pinGate'),
+            appShell: document.getElementById('appShell'),
+            pinForm: document.getElementById('pinForm'),
+            pinInput: document.getElementById('pinInput'),
+            pinError: document.getElementById('pinError'),
+            pinSubmit: document.getElementById('pinSubmit'),
+            lockBtn: document.getElementById('lockBtn'),
+            deviceSelect: document.getElementById('deviceSelect'),
+            deviceHelp: document.getElementById('deviceHelp'),
+            internetState: document.getElementById('internetState'),
+            blockedCount: document.getElementById('blockedCount'),
+            blockedTags: document.getElementById('blockedTags'),
+            internetToggleBtn: document.getElementById('internetToggleBtn'),
+            quickYoutubeBtn: document.getElementById('quickYoutubeBtn'),
+            quickMinecraftBtn: document.getElementById('quickMinecraftBtn'),
+            quickFreeTimeBtn: document.getElementById('quickFreeTimeBtn'),
+            quickHomeworkBtn: document.getElementById('quickHomeworkBtn'),
+            blockedServiceSelect: document.getElementById('blockedServiceSelect'),
+            unblockDuration: document.getElementById('unblockDuration'),
+            customMinutesWrap: document.getElementById('customMinutesWrap'),
+            customMinutes: document.getElementById('customMinutes'),
+            applyUnblockBtn: document.getElementById('applyUnblockBtn'),
+            categorySelect: document.getElementById('categorySelect'),
+            serviceSelect: document.getElementById('serviceSelect'),
+            blockServiceBtn: document.getElementById('blockServiceBtn'),
+            refreshBtn: document.getElementById('refreshBtn'),
+            toastHost: document.getElementById('toastHost')
+        };
+
+        function apiUrl(path) {
+            return `${API_BASE_URL}${path}`;
+        }
+
+        async function fetchJson(path, options = {}) {
+            const requestOptions = {
+                headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+                ...options
+            };
+            const res = await fetch(apiUrl(path), requestOptions);
+            const payload = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                const detail = payload.detail || `Request failed (${res.status})`;
+                throw new Error(detail);
+            }
+            return payload;
+        }
+
+        function showToast(message, tone = 'info') {
+            const bg = tone === 'error' ? 'bg-red-700' : tone === 'success' ? 'bg-emerald-700' : 'bg-ink';
+            const node = document.createElement('div');
+            node.className = `${bg} text-white rounded-xl px-4 py-3 text-sm shadow-lg animate-reveal`;
+            node.textContent = message;
+            els.toastHost.appendChild(node);
+            setTimeout(() => node.remove(), 2600);
+        }
+
+        function setLockedUi(locked) {
+            els.pinGate.classList.toggle('hidden', !locked);
+            els.appShell.classList.toggle('hidden', locked);
+            if (locked) {
+                els.pinInput.focus();
+            }
+        }
+
+        function getServiceLabel(serviceId) {
+            const item = state.catalog.find((s) => s.service_id === serviceId);
+            return item ? item.display_name : serviceId;
+        }
+
+        function renderDeviceOptions() {
+            if (!state.devices.length) {
+                els.deviceSelect.innerHTML = '<option value="">No devices available</option>';
+                els.deviceSelect.disabled = true;
+                els.deviceHelp.textContent = 'No persistent devices were returned by the server.';
+                return;
+            }
+            const options = ['<option value="">Choose a device...</option>']
+                .concat(state.devices.map((d) => `<option value="${d.client_id}">${d.client_name}</option>`));
+            els.deviceSelect.innerHTML = options.join('');
+            els.deviceSelect.disabled = false;
+            els.deviceHelp.textContent = 'Pick a device to load internet and service status.';
+        }
+
+        function renderStatus() {
+            const hasDevice = Boolean(state.selectedDevice);
+            if (!hasDevice) {
+                els.internetState.textContent = 'Select device';
+                els.internetState.className = 'mt-1 text-lg font-semibold text-slate-500';
+                els.blockedCount.textContent = '-';
+                els.blockedCount.className = 'mt-1 text-lg font-semibold text-slate-500';
+                els.blockedTags.innerHTML = '';
+                return;
+            }
+
+            if (state.isolation === true) {
+                els.internetState.textContent = 'Blocked';
+                els.internetState.className = 'mt-1 text-lg font-semibold text-ember';
+            } else {
+                els.internetState.textContent = 'Unblocked';
+                els.internetState.className = 'mt-1 text-lg font-semibold text-moss';
+            }
+
+            els.blockedCount.textContent = String(state.blockedServices.length);
+            els.blockedCount.className = state.blockedServices.length
+                ? 'mt-1 text-lg font-semibold text-ember'
+                : 'mt-1 text-lg font-semibold text-moss';
+
+            els.blockedTags.innerHTML = '';
+            if (!state.blockedServices.length) {
+                const empty = document.createElement('span');
+                empty.className = 'text-xs text-slate-500';
+                empty.textContent = 'No blocked services currently.';
+                els.blockedTags.appendChild(empty);
+            } else {
+                state.blockedServices.forEach((serviceId) => {
+                    const tag = document.createElement('span');
+                    tag.className = 'rounded-full bg-red-100 px-3 py-1 text-xs font-medium text-red-800';
+                    tag.textContent = getServiceLabel(serviceId);
+                    els.blockedTags.appendChild(tag);
+                });
+            }
+        }
+
+        function renderInternetButton() {
+            const hasDevice = Boolean(state.selectedDevice);
+            if (!hasDevice || state.isolation === null) {
+                els.internetToggleBtn.disabled = true;
+                els.internetToggleBtn.className = 'mt-3 w-full rounded-2xl bg-slate-300 px-4 py-4 text-base font-semibold text-slate-700';
+                els.internetToggleBtn.textContent = 'Select a device first';
+                return;
+            }
+            els.internetToggleBtn.disabled = false;
+            if (state.isolation) {
+                els.internetToggleBtn.className = 'mt-3 w-full rounded-2xl bg-moss px-4 py-4 text-base font-semibold text-white transition hover:brightness-110 active:scale-[0.99]';
+                els.internetToggleBtn.textContent = 'Unblock Internet';
+            } else {
+                els.internetToggleBtn.className = 'mt-3 w-full rounded-2xl bg-ember px-4 py-4 text-base font-semibold text-white transition hover:brightness-110 active:scale-[0.99]';
+                els.internetToggleBtn.textContent = 'Block Internet';
+            }
+        }
+
+        function renderQuickActions() {
+            const enabled = Boolean(state.selectedDevice);
+            els.quickYoutubeBtn.disabled = !enabled;
+            els.quickMinecraftBtn.disabled = !enabled;
+            els.quickFreeTimeBtn.disabled = !enabled;
+            els.quickHomeworkBtn.disabled = !enabled;
+        }
+
+        function renderBlockedServiceControls() {
+            const hasDevice = Boolean(state.selectedDevice);
+            const hasBlocked = hasDevice && state.blockedServices.length > 0;
+            els.blockedServiceSelect.disabled = !hasBlocked;
+            els.unblockDuration.disabled = !hasBlocked;
+            els.applyUnblockBtn.disabled = !hasBlocked;
+
+            if (!hasBlocked) {
+                els.blockedServiceSelect.innerHTML = '<option value="">No blocked services</option>';
+                return;
+            }
+
+            const options = ['<option value="">Choose blocked service...</option>']
+                .concat(state.blockedServices.map((serviceId) => `<option value="${serviceId}">${getServiceLabel(serviceId)}</option>`));
+            els.blockedServiceSelect.innerHTML = options.join('');
+            els.unblockDuration.value = 'permanent';
+            els.customMinutesWrap.classList.add('hidden');
+            els.customMinutes.value = '';
+        }
+
+        function renderCategoryOptions() {
+            if (!state.catalog.length) {
+                els.categorySelect.innerHTML = '<option value="">No categories available</option>';
+                els.categorySelect.disabled = true;
+                return;
+            }
+
+            const categories = [...new Set(state.catalog.map((s) => s.category))].sort();
+            const options = ['<option value="">Choose category...</option>']
+                .concat(categories.map((category) => `<option value="${category}">${category}</option>`));
+            els.categorySelect.innerHTML = options.join('');
+            els.categorySelect.disabled = false;
+            els.serviceSelect.innerHTML = '<option value="">Select category first</option>';
+            els.serviceSelect.disabled = true;
+            els.blockServiceBtn.disabled = true;
+        }
+
+        function renderServicesForCategory(category) {
+            if (!category) {
+                els.serviceSelect.innerHTML = '<option value="">Select category first</option>';
+                els.serviceSelect.disabled = true;
+                els.blockServiceBtn.disabled = true;
+                return;
+            }
+
+            const matches = state.catalog.filter((item) => item.category === category);
+            const options = ['<option value="">Choose service...</option>']
+                .concat(matches.map((item) => `<option value="${item.service_id}">${item.display_name}</option>`));
+            els.serviceSelect.innerHTML = options.join('');
+            els.serviceSelect.disabled = false;
+            els.blockServiceBtn.disabled = !state.selectedDevice;
+        }
+
+        async function loadDevices() {
+            const payload = await fetchJson('/clients');
+            state.devices = payload.clients || [];
+            renderDeviceOptions();
+        }
+
+        async function loadCatalog() {
+            const payload = await fetchJson('/services/blockable');
+            state.catalog = payload.services || [];
+            renderCategoryOptions();
+        }
+
+        async function loadSelectedDeviceState() {
+            if (!state.selectedDevice) {
+                return;
+            }
+            const id = state.selectedDevice.client_id;
+            const [isolationData, blockedData] = await Promise.all([
+                fetchJson(`/clients/${encodeURIComponent(id)}/internet/isolation`),
+                fetchJson(`/clients/${encodeURIComponent(id)}/services/blocked`)
+            ]);
+            state.isolation = Boolean(isolationData.isolated);
+            state.blockedServices = blockedData.blocked_services || [];
+            renderStatus();
+            renderInternetButton();
+            renderBlockedServiceControls();
+            renderCategoryOptions();
+            if (els.categorySelect.value) {
+                renderServicesForCategory(els.categorySelect.value);
+            }
+        }
+
+        function selectedDeviceName() {
+            return state.selectedDevice ? state.selectedDevice.client_name : '';
+        }
+
+        async function toggleInternet() {
+            if (!state.selectedDevice) {
+                return;
+            }
+            const id = state.selectedDevice.client_id;
+            const method = state.isolation ? 'DELETE' : 'PUT';
+            const label = state.isolation ? 'Internet unblocked' : 'Internet blocked';
+            await fetchJson(`/clients/${encodeURIComponent(id)}/internet/isolation`, {
+                method,
+                body: JSON.stringify({ pin: state.pin })
+            });
+            showToast(label, 'success');
+            await loadSelectedDeviceState();
+        }
+
+        async function applyUnblock() {
+            if (!state.selectedDevice) {
+                throw new Error('Select a device first.');
+            }
+            const serviceId = els.blockedServiceSelect.value;
+            if (!serviceId) {
+                throw new Error('Choose a blocked service.');
+            }
+
+            const id = state.selectedDevice.client_id;
+            const clientName = selectedDeviceName();
+            const duration = els.unblockDuration.value;
+
+            if (duration === 'permanent') {
+                await fetchJson(`/clients/${encodeURIComponent(id)}/services/blocked/${encodeURIComponent(serviceId)}`, {
+                    method: 'DELETE',
+                    body: JSON.stringify({ pin: state.pin, client_name: clientName })
+                });
+                showToast(`${getServiceLabel(serviceId)} unblocked permanently`, 'success');
+            } else {
+                let minutes;
+                if (duration === 'custom') {
+                    minutes = Number.parseInt(els.customMinutes.value, 10);
+                    if (!Number.isInteger(minutes) || minutes <= 0 || minutes > 120) {
+                        throw new Error('Custom minutes must be between 1 and 120.');
+                    }
+                } else {
+                    minutes = Number.parseInt(duration, 10);
+                }
+
+                await fetchJson(`/clients/${encodeURIComponent(id)}/services/blocked/${encodeURIComponent(serviceId)}/temporary-unblock`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        pin: state.pin,
+                        client_name: clientName,
+                        duration_minutes: minutes
+                    })
+                });
+                showToast(`${getServiceLabel(serviceId)} unblocked for ${minutes} min`, 'success');
+            }
+
+            await loadSelectedDeviceState();
+        }
+
+        async function temporaryUnblockQuick(serviceId, minutes) {
+            if (!state.selectedDevice) {
+                throw new Error('Select a device first.');
+            }
+            const id = state.selectedDevice.client_id;
+            await fetchJson(`/clients/${encodeURIComponent(id)}/services/blocked/${encodeURIComponent(serviceId)}/temporary-unblock`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    pin: state.pin,
+                    client_name: selectedDeviceName(),
+                    duration_minutes: minutes
+                })
+            });
+            showToast(`${getServiceLabel(serviceId)} allowed for ${minutes} min`, 'success');
+            await loadSelectedDeviceState();
+        }
+
+        async function activateHomeworkMode() {
+            if (!state.selectedDevice) {
+                throw new Error('Select a device first.');
+            }
+            const id = state.selectedDevice.client_id;
+            const body = JSON.stringify({
+                pin: state.pin,
+                client_name: selectedDeviceName()
+            });
+
+            await Promise.all([
+                fetchJson(`/clients/${encodeURIComponent(id)}/services/blocked/youtube`, {
+                    method: 'PUT',
+                    body
+                }),
+                fetchJson(`/clients/${encodeURIComponent(id)}/services/blocked/minecraft`, {
+                    method: 'PUT',
+                    body
+                })
+            ]);
+
+            showToast('Homework Mode enabled', 'success');
+            await loadSelectedDeviceState();
+        }
+
+        async function activateFreeTimeMode() {
+            if (!state.selectedDevice) {
+                throw new Error('Select a device first.');
+            }
+            const id = state.selectedDevice.client_id;
+
+            await Promise.all([
+                fetchJson(`/clients/${encodeURIComponent(id)}/services/blocked/youtube/temporary-unblock`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        pin: state.pin,
+                        client_name: selectedDeviceName(),
+                        duration_minutes: 60
+                    })
+                }),
+                fetchJson(`/clients/${encodeURIComponent(id)}/services/blocked/minecraft/temporary-unblock`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        pin: state.pin,
+                        client_name: selectedDeviceName(),
+                        duration_minutes: 60
+                    })
+                })
+            ]);
+
+            showToast('Free Time started for 60 min', 'success');
+            await loadSelectedDeviceState();
+        }
+
+        async function blockSelectedService() {
+            if (!state.selectedDevice) {
+                throw new Error('Select a device first.');
+            }
+            const serviceId = els.serviceSelect.value;
+            if (!serviceId) {
+                throw new Error('Choose a service to block.');
+            }
+            if (state.blockedServices.includes(serviceId)) {
+                throw new Error(`${getServiceLabel(serviceId)} is already blocked.`);
+            }
+
+            const id = state.selectedDevice.client_id;
+            await fetchJson(`/clients/${encodeURIComponent(id)}/services/blocked/${encodeURIComponent(serviceId)}`, {
+                method: 'PUT',
+                body: JSON.stringify({
+                    pin: state.pin,
+                    client_name: selectedDeviceName()
+                })
+            });
+            showToast(`${getServiceLabel(serviceId)} blocked`, 'success');
+            await loadSelectedDeviceState();
+        }
+
+        async function unlockWithPin(event) {
+            event.preventDefault();
+            els.pinError.textContent = '';
+            const pin = els.pinInput.value.trim();
+            if (!pin) {
+                els.pinError.textContent = 'PIN is required.';
+                return;
+            }
+
+            els.pinSubmit.disabled = true;
+            els.pinSubmit.textContent = 'Verifying...';
+            try {
+                await fetchJson('/auth/verify-pin', {
+                    method: 'POST',
+                    body: JSON.stringify({ pin })
+                });
+                state.pin = pin;
+                setLockedUi(false);
+                showToast('PIN accepted', 'success');
+                await Promise.all([loadDevices(), loadCatalog()]);
+            } catch (err) {
+                state.pin = '';
+                els.pinError.textContent = err.message || 'Invalid PIN';
+                showToast('Invalid PIN', 'error');
+            } finally {
+                els.pinSubmit.disabled = false;
+                els.pinSubmit.textContent = 'Unlock Controls';
+                els.pinInput.value = '';
+            }
+        }
+
+        function lockApp() {
+            state.pin = '';
+            state.selectedDevice = null;
+            state.isolation = null;
+            state.blockedServices = [];
+            setLockedUi(true);
+            renderStatus();
+            renderInternetButton();
+            renderQuickActions();
+            renderBlockedServiceControls();
+            showToast('Console locked');
+        }
+
+        async function guardedAction(action) {
+            try {
+                await action();
+            } catch (err) {
+                const message = err.message || 'Request failed.';
+                if (message.toLowerCase().includes('invalid pin')) {
+                    lockApp();
+                    els.pinError.textContent = 'PIN expired or invalid. Enter PIN again.';
+                }
+                showToast(message, 'error');
+            }
+        }
+
+        els.pinForm.addEventListener('submit', unlockWithPin);
+        els.lockBtn.addEventListener('click', lockApp);
+
+        els.deviceSelect.addEventListener('change', async (event) => {
+            const id = event.target.value;
+            state.selectedDevice = state.devices.find((d) => d.client_id === id) || null;
+            state.isolation = null;
+            state.blockedServices = [];
+            renderStatus();
+            renderInternetButton();
+            renderQuickActions();
+            renderBlockedServiceControls();
+            if (!state.selectedDevice) {
+                return;
+            }
+            await guardedAction(loadSelectedDeviceState);
+        });
+
+        els.unblockDuration.addEventListener('change', () => {
+            const showCustom = els.unblockDuration.value === 'custom';
+            els.customMinutesWrap.classList.toggle('hidden', !showCustom);
+            if (!showCustom) {
+                els.customMinutes.value = '';
+            }
+        });
+
+        els.categorySelect.addEventListener('change', (event) => {
+            renderServicesForCategory(event.target.value);
+        });
+
+        els.internetToggleBtn.addEventListener('click', () => guardedAction(toggleInternet));
+        els.quickYoutubeBtn.addEventListener('click', () => guardedAction(() => temporaryUnblockQuick('youtube', 30)));
+        els.quickMinecraftBtn.addEventListener('click', () => guardedAction(() => temporaryUnblockQuick('minecraft', 30)));
+        els.quickFreeTimeBtn.addEventListener('click', () => guardedAction(activateFreeTimeMode));
+        els.quickHomeworkBtn.addEventListener('click', () => guardedAction(activateHomeworkMode));
+        els.applyUnblockBtn.addEventListener('click', () => guardedAction(applyUnblock));
+        els.blockServiceBtn.addEventListener('click', () => guardedAction(blockSelectedService));
+        els.refreshBtn.addEventListener('click', () => guardedAction(loadSelectedDeviceState));
+
+        setLockedUi(true);
+        renderStatus();
+        renderInternetButton();
+        renderQuickActions();
+        renderBlockedServiceControls();
+    </script>
+</body>
+</html>

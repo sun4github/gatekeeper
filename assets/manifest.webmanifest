@@ -1,0 +1,31 @@
+{
+  "name": "Gatekeeper",
+  "short_name": "Gatekeeper",
+  "description": "Parental control console for internet and service blocking.",
+  "id": "/gatekeeper/",
+  "start_url": "/gatekeeper/",
+  "scope": "/gatekeeper/",
+  "display": "standalone",
+  "background_color": "#131926",
+  "theme_color": "#224f6e",
+  "icons": [
+    {
+      "src": "/gatekeeper/api/v1/ui/icon-192",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/gatekeeper/api/v1/ui/icon-512",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/gatekeeper/api/v1/ui/icon-maskable-512",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
