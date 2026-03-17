@@ -23,6 +23,8 @@
     { "service_id": "steam",       "display_name": "Steam",        "category": "gaming" },
     { "service_id": "roblox",      "display_name": "Roblox",       "category": "gaming" },
     { "service_id": "minecraft",   "display_name": "Minecraft",    "category": "gaming" },
-    { "service_id": "epic_games",  "display_name": "Epic Games",   "category": "gaming" }
+    { "service_id": "epic_games",  "display_name": "Epic Games",   "category": "gaming" },
+
+    { "service_id": "amazon",       "display_name": "Amazon",        "category": "shopping" }
   ]
 }
