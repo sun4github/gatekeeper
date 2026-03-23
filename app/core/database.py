@@ -86,7 +86,8 @@ async def db_append_viewing_event(
     if _DB_POOL is None:
         return
 
-    now_utc = datetime.now(timezone.utc).isoformat()
+    # Use local time for consistency with today's date comparison
+    now_local = datetime.now().astimezone().isoformat()
     duration_label = (
         f"{requested_duration_minutes} minutes"
         if requested_duration_minutes is not None
@@ -94,7 +95,7 @@ async def db_append_viewing_event(
     )
 
     new_event = {
-        "unblock_started_at": now_utc,
+        "unblock_started_at": now_local,
         "requested_duration_minutes": requested_duration_minutes,
         "requested_duration_label": duration_label,
         "unblock_ended_at": None,
@@ -141,7 +142,8 @@ async def db_close_viewing_event(
     if _DB_POOL is None:
         return
 
-    now_utc = datetime.now(timezone.utc)
+    # Use local time for consistency with today's date comparison
+    now_local = datetime.now().astimezone()
 
     async with _DB_POOL.connection() as conn:
         async with conn.transaction():
@@ -164,14 +166,14 @@ async def db_close_viewing_event(
             found_and_closed = False
             for event in reversed(events):
                 if event.get("unblock_ended_at") is None:
-                    event["unblock_ended_at"] = now_utc.isoformat()
+                    event["unblock_ended_at"] = now_local.isoformat()
                     started_str = event.get("unblock_started_at")
                     if started_str:
                         try:
                             started_dt = datetime.fromisoformat(started_str)
                             if started_dt.tzinfo is None:
                                 started_dt = started_dt.replace(tzinfo=timezone.utc)
-                            duration_secs = max(0, int((now_utc - started_dt).total_seconds()))
+                            duration_secs = max(0, int((now_local - started_dt).total_seconds()))
                             event["actual_duration_seconds"] = duration_secs
                         except (ValueError, TypeError):
                             pass
@@ -196,7 +198,8 @@ async def db_get_viewing_time_today(
     if _DB_POOL is None:
         return {}
 
-    today_start = datetime.now(timezone.utc).replace(
+    # Use local time (system timezone) for "today" comparison
+    today_start = datetime.now().astimezone().replace(
         hour=0, minute=0, second=0, microsecond=0
     ).isoformat()
 

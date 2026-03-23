@@ -1,7 +1,7 @@
 ---
 name: Planner
 description: This custom agent will analyze feature requests and create detailed plans and todo lists for implementation.
-tools: ['agent', 'read', 'search', 'todo', 'web']
+tools: [ 'read', 'search', 'todo', 'web']
 model: qwen3-coder-next (ollama)
 user-invocable: false
 ---

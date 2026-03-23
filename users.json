@@ -1,5 +1,6 @@
 {
   "users": [
-    {"name": "Rikki"}
+    {"name": "Rikki"},
+    {"name": "Other"}
   ]
 }
