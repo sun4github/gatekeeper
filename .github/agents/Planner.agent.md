@@ -28,9 +28,10 @@ When given a feature request, follow these steps:
           │   ├── schemas/         # Pydantic models (like DTOs)
           │   │   └── sendgrid.py
           │   ├── services/        # Logic (Any services or helper methods or classes)
-          │   │   └── ai_service.py
+          │   │   └── adguard.py
           │   └── core/            # Config (like appsettings.json)
-          │       └── config.py
+          │       └── config.py    # Read configuration settings from .json files and environment variables from .env in this file
+          |       └── database.py  # Connect to the database and retrieve data using psycopg and psycopg_pool
           ├── .env                 # Secrets
           └── requirements.txt     # Dependencies (like NuGet)
           └── README.md            # Project documentation, architecture decisions, etc.
